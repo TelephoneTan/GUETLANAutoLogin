@@ -15,7 +15,7 @@ const version = "1.3"
 
 const title = "\nGUET校园网自动登录 v" + version + "\n"
 
-const github = "\n代码开源于：https://github.com/Telephone2019/GUETLANAutoLogin\n"
+const github = "\n代码开源于：https://github.com/TelephoneTan/GUETLANAutoLogin\n"
 
 const usage = "\n使用方法：\n" +
 	"\n" +
@@ -34,6 +34,7 @@ func help(argNum int) {
 func main() {
 	fmt.Printf(title)
 	fmt.Printf(github)
+	fmt.Println()
 	const argNum = 4
 	if len(os.Args) < argNum+1 {
 		help(argNum)
@@ -56,8 +57,19 @@ func main() {
 			for tested, redirect := false, false; ; {
 				fmt.Println(time.Now().String() + "：")
 				redirect = false
+				u, _ := url.Parse("http://www.baidu.com")
+				r := &http.Request{
+					Method: http.MethodGet,
+					URL:    u,
+					Header: map[string][]string{
+						"User-Agent": {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.42"},
+					},
+				}
 				_, err := (&http.Client{
 					CheckRedirect: func(req *http.Request, via []*http.Request) error {
+						if strings.Contains(req.URL.String(), "www.baidu.com/") {
+							return http.ErrUseLastResponse
+						}
 						redirect = true
 						params := make([]string, 0)
 						params = append(params, "wlan_user_ip="+req.URL.Query().Get("wlanuserip"))
@@ -82,7 +94,7 @@ func main() {
 							"&jsVersion=4.1&terminal_type=1&lang=zh-cn&v=1138&lang=zh")
 						return errors.New("redirect: " + req.URL.String())
 					},
-				}).Get("http://www.baidu.com")
+				}).Do(r)
 				if !redirect {
 					tested = false
 				}
