@@ -1,8 +1,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -54,9 +54,8 @@ func main() {
 			fmt.Printf("\n参数错误：无法将参数 %s 解析为秒数\n", sec)
 			help(argNum)
 		} else {
-			for tested, redirect := false, false; ; {
+			for tested, redirect, params := false, false, []string{}; ; redirect, params = false, nil {
 				fmt.Println(time.Now().String() + "：")
-				redirect = false
 				u, _ := url.Parse("http://www.baidu.com")
 				r := &http.Request{
 					Method: http.MethodGet,
@@ -65,46 +64,62 @@ func main() {
 						"User-Agent": {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.42"},
 					},
 				}
-				_, err := (&http.Client{
+				res, err := (&http.Client{
+					Timeout: 2 * time.Second,
 					CheckRedirect: func(req *http.Request, via []*http.Request) error {
 						if strings.Contains(req.URL.String(), "www.baidu.com/") {
 							return http.ErrUseLastResponse
 						}
 						redirect = true
-						params := make([]string, 0)
 						params = append(params, "wlan_user_ip="+req.URL.Query().Get("wlanuserip"))
 						params = append(params, "wlan_user_ipv6="+req.URL.Query().Get("wlanuseripv6"))
 						params = append(params, "wlan_user_mac="+strings.ReplaceAll(req.URL.Query().Get("wlanusermac"), "-", ""))
 						params = append(params, "wlan_ac_ip="+req.URL.Query().Get("wlanacip"))
 						params = append(params, "wlan_ac_name="+req.URL.Query().Get("wlanacname"))
-						var id = id
-						if !tested {
-							id += carrier
-							fmt.Printf("正在尝试用 %s 登录\n", carrierLabel)
-						} else {
-							fmt.Println("正在尝试用 校园网 登录")
-						}
-						tested = !tested
-						http.Get("http://10.0.1.5:801/eportal/portal/login?callback=dr1003&login_method=1&user_account=%2C0%2C" +
-							id +
-							"&user_password=" +
-							pwd +
-							"&" +
-							strings.Join(params, "&") +
-							"&jsVersion=4.1&terminal_type=1&lang=zh-cn&v=1138&lang=zh")
-						return errors.New("redirect: " + req.URL.String())
+						return http.ErrUseLastResponse
 					},
 				}).Do(r)
-				if !redirect {
-					tested = false
+				timeout := err != nil || res.StatusCode == http.StatusBadGateway
+				if timeout {
+					res, _ := http.Get("http://10.0.1.5")
+					htmlBA, _ := io.ReadAll(res.Body)
+					_ = res.Body.Close()
+					var html string
+					if len(htmlBA) > 0 {
+						html = string(htmlBA)
+					}
+					timeout = strings.Contains(html, "COMWebLoginID_0")
 				}
-				if err != nil {
-					fmt.Println(err)
-					continue
+				needLogin := timeout || redirect
+				if needLogin {
+					var id = id
+					if !tested {
+						id += carrier
+						fmt.Printf("正在尝试用 %s 登录\n", carrierLabel)
+					} else {
+						fmt.Println("正在尝试用 校园网 登录")
+					}
+					tested = !tested
+					if timeout {
+						_, _ = http.Get(
+							"http://10.0.1.5/drcom/login?callback=dr1003&DDDDD=" +
+								id +
+								"&upass=" +
+								pwd + "&0MKKey=123456")
+					} else if redirect {
+						_, _ = http.Get(
+							"http://10.0.1.5:801/eportal/portal/login?callback=dr1003&login_method=1&user_account=%2C0%2C" +
+								id +
+								"&user_password=" +
+								pwd +
+								"&" +
+								strings.Join(params, "&"))
+					}
 				} else {
+					tested = false
 					fmt.Println("无需登录")
+					time.Sleep(time.Duration(interval) * time.Second)
 				}
-				time.Sleep(time.Duration(interval) * time.Second)
 			}
 		}
 	}
