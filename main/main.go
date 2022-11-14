@@ -81,14 +81,18 @@ func main() {
 				}).Do(r)
 				timeout := err != nil || res.StatusCode == http.StatusBadGateway
 				if timeout {
-					res, _ := http.Get("http://10.0.1.5")
-					htmlBA, _ := io.ReadAll(res.Body)
-					_ = res.Body.Close()
-					var html string
-					if len(htmlBA) > 0 {
-						html = string(htmlBA)
+					res, err := http.Get("http://10.0.1.5")
+					if err == nil {
+						htmlBA, _ := io.ReadAll(res.Body)
+						_ = res.Body.Close()
+						var html string
+						if len(htmlBA) > 0 {
+							html = string(htmlBA)
+						}
+						timeout = strings.Contains(html, "COMWebLoginID_0")
+					} else {
+						timeout = false
 					}
-					timeout = strings.Contains(html, "COMWebLoginID_0")
 				}
 				needLogin := timeout || redirect
 				if needLogin {
