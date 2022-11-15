@@ -80,6 +80,9 @@ func main() {
 					},
 				}).Do(r)
 				timeout := err != nil || res.StatusCode == http.StatusBadGateway
+				if err == nil {
+					_ = res.Body.Close()
+				}
 				if timeout {
 					res, err := http.Get("http://10.0.1.5")
 					if err == nil {
@@ -105,19 +108,25 @@ func main() {
 					}
 					tested = !tested
 					if timeout {
-						_, _ = http.Get(
+						res, err := http.Get(
 							"http://10.0.1.5/drcom/login?callback=dr1003&DDDDD=" +
 								id +
 								"&upass=" +
 								pwd + "&0MKKey=123456")
+						if err == nil {
+							_ = res.Body.Close()
+						}
 					} else if redirect {
-						_, _ = http.Get(
+						res, err := http.Get(
 							"http://10.0.1.5:801/eportal/portal/login?callback=dr1003&login_method=1&user_account=%2C0%2C" +
 								id +
 								"&user_password=" +
 								pwd +
 								"&" +
 								strings.Join(params, "&"))
+						if err == nil {
+							_ = res.Body.Close()
+						}
 					}
 				} else {
 					tested = false
