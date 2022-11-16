@@ -31,7 +31,7 @@ func help(argNum int) {
 	_, _ = fmt.Scanln()
 }
 
-func main() {
+func run(args []string) {
 	fmt.Printf(title)
 	fmt.Printf(github)
 	fmt.Println()
@@ -39,46 +39,47 @@ func main() {
 	if len(os.Args) < argNum+1 {
 		help(argNum)
 	} else {
-		carrierLabel := os.Args[3]
+		carrierLabel := args[3]
 		carrier := url.QueryEscape(map[string]string{
 			"校园网":  "",
 			"中国移动": "@cmcc",
 			"中国联通": "@unicom",
 			"中国电信": "@telecom",
 		}[carrierLabel])
-		id := url.QueryEscape(os.Args[1])
-		pwd := url.QueryEscape(os.Args[2])
-		sec := os.Args[4]
+		id := url.QueryEscape(args[1])
+		pwd := url.QueryEscape(args[2])
+		sec := args[4]
 		interval, err := strconv.Atoi(sec)
 		if err != nil {
 			fmt.Printf("\n参数错误：无法将参数 %s 解析为秒数\n", sec)
 			help(argNum)
 		} else {
+			u, _ := url.Parse("http://www.baidu.com")
+			r := &http.Request{
+				Method: http.MethodGet,
+				URL:    u,
+				Header: map[string][]string{
+					"User-Agent": {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.42"},
+				},
+			}
+			client := http.Client{
+				Timeout: 2 * time.Second,
+			}
 			for tested, redirect, params := false, false, []string{}; ; redirect, params = false, nil {
 				fmt.Println(time.Now().String() + "：")
-				u, _ := url.Parse("http://www.baidu.com")
-				r := &http.Request{
-					Method: http.MethodGet,
-					URL:    u,
-					Header: map[string][]string{
-						"User-Agent": {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.42"},
-					},
-				}
-				res, err := (&http.Client{
-					Timeout: 2 * time.Second,
-					CheckRedirect: func(req *http.Request, via []*http.Request) error {
-						if strings.Contains(req.URL.String(), "www.baidu.com/") {
-							return http.ErrUseLastResponse
-						}
-						redirect = true
-						params = append(params, "wlan_user_ip="+req.URL.Query().Get("wlanuserip"))
-						params = append(params, "wlan_user_ipv6="+req.URL.Query().Get("wlanuseripv6"))
-						params = append(params, "wlan_user_mac="+strings.ReplaceAll(req.URL.Query().Get("wlanusermac"), "-", ""))
-						params = append(params, "wlan_ac_ip="+req.URL.Query().Get("wlanacip"))
-						params = append(params, "wlan_ac_name="+req.URL.Query().Get("wlanacname"))
+				client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+					if strings.Contains(req.URL.String(), "www.baidu.com/") {
 						return http.ErrUseLastResponse
-					},
-				}).Do(r)
+					}
+					redirect = true
+					params = append(params, "wlan_user_ip="+req.URL.Query().Get("wlanuserip"))
+					params = append(params, "wlan_user_ipv6="+req.URL.Query().Get("wlanuseripv6"))
+					params = append(params, "wlan_user_mac="+strings.ReplaceAll(req.URL.Query().Get("wlanusermac"), "-", ""))
+					params = append(params, "wlan_ac_ip="+req.URL.Query().Get("wlanacip"))
+					params = append(params, "wlan_ac_name="+req.URL.Query().Get("wlanacname"))
+					return http.ErrUseLastResponse
+				}
+				res, err := client.Do(r)
 				timeout := err != nil || res.StatusCode == http.StatusBadGateway
 				if err == nil {
 					_ = res.Body.Close()
@@ -136,4 +137,8 @@ func main() {
 			}
 		}
 	}
+}
+
+func main() {
+	run(os.Args)
 }
