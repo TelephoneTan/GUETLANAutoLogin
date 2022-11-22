@@ -82,6 +82,7 @@ func run(args []string) {
 				res, err := client.Do(r)
 				timeout := err != nil || res.StatusCode == http.StatusBadGateway
 				if err == nil {
+					_, _ = io.ReadAll(res.Body)
 					_ = res.Body.Close()
 				}
 				if timeout {
@@ -115,6 +116,7 @@ func run(args []string) {
 								"&upass=" +
 								pwd + "&0MKKey=123456")
 						if err == nil {
+							_, _ = io.ReadAll(res.Body)
 							_ = res.Body.Close()
 						}
 					} else if redirect {
@@ -126,6 +128,7 @@ func run(args []string) {
 								"&" +
 								strings.Join(params, "&"))
 						if err == nil {
+							_, _ = io.ReadAll(res.Body)
 							_ = res.Body.Close()
 						}
 					}
