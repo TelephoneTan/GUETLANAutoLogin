@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,14 +41,14 @@ func run(args []string) {
 		help(argNum)
 	} else {
 		carrierLabel := args[3]
-		carrier := url.QueryEscape(map[string]string{
+		carrier := map[string]string{
 			"校园网":  "",
 			"中国移动": "@cmcc",
 			"中国联通": "@unicom",
 			"中国电信": "@telecom",
-		}[carrierLabel])
-		id := url.QueryEscape(args[1])
-		pwd := url.QueryEscape(args[2])
+		}[carrierLabel]
+		id := args[1]
+		pwd := base64.StdEncoding.EncodeToString([]byte(args[2]))
 		sec := args[4]
 		interval, err := strconv.Atoi(sec)
 		if err != nil {
@@ -65,18 +66,18 @@ func run(args []string) {
 			client := http.Client{
 				Timeout: 2 * time.Second,
 			}
-			for tested, redirect, params := false, false, []string{}; ; redirect, params = false, nil {
+			for tested, redirect, params := false, false, map[string]string{}; ; redirect, params = false, map[string]string{} {
 				fmt.Println(time.Now().String() + "：")
 				client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 					if strings.Contains(req.URL.String(), "www.baidu.com/") {
 						return http.ErrUseLastResponse
 					}
 					redirect = true
-					params = append(params, "wlan_user_ip="+req.URL.Query().Get("wlanuserip"))
-					params = append(params, "wlan_user_ipv6="+req.URL.Query().Get("wlanuseripv6"))
-					params = append(params, "wlan_user_mac="+strings.ReplaceAll(req.URL.Query().Get("wlanusermac"), "-", ""))
-					params = append(params, "wlan_ac_ip="+req.URL.Query().Get("wlanacip"))
-					params = append(params, "wlan_ac_name="+req.URL.Query().Get("wlanacname"))
+					params["wlan_user_ip"] = req.URL.Query().Get("wlanuserip")
+					params["wlan_user_ipv6"] = req.URL.Query().Get("wlanuseripv6")
+					params["wlan_user_mac"] = strings.ReplaceAll(req.URL.Query().Get("wlanusermac"), "-", "")
+					params["wlan_ac_ip"] = req.URL.Query().Get("wlanacip")
+					params["wlan_ac_name"] = req.URL.Query().Get("wlanacname")
 					return http.ErrUseLastResponse
 				}
 				res, err := client.Do(r)
@@ -110,23 +111,31 @@ func run(args []string) {
 					}
 					tested = !tested
 					if timeout {
-						res, err := http.Get(
-							"http://10.0.1.5/drcom/login?callback=dr1003&DDDDD=" +
-								id +
-								"&upass=" +
-								pwd + "&0MKKey=123456")
+						q := url.Values{
+							"callback": {"dr1003"},
+							"0MKKey":   {"123456"},
+							"DDDDD":    {id},
+							"upass":    {pwd},
+						}
+						for k, v := range params {
+							q.Set(k, v)
+						}
+						res, err := http.Get("http://10.0.1.5/drcom/login?" + q.Encode())
 						if err == nil {
 							_, _ = io.ReadAll(res.Body)
 							_ = res.Body.Close()
 						}
 					} else if redirect {
-						res, err := http.Get(
-							"http://10.0.1.5:801/eportal/portal/login?callback=dr1003&login_method=1&user_account=%2C0%2C" +
-								id +
-								"&user_password=" +
-								pwd +
-								"&" +
-								strings.Join(params, "&"))
+						q := url.Values{
+							"callback":      {"dr1003"},
+							"login_method":  {"1"},
+							"user_account":  {",0," + id},
+							"user_password": {pwd},
+						}
+						for k, v := range params {
+							q.Set(k, v)
+						}
+						res, err := http.Get("http://10.0.1.5:801/eportal/portal/login?" + q.Encode())
 						if err == nil {
 							_, _ = io.ReadAll(res.Body)
 							_ = res.Body.Close()
