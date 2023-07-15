@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="make win-arm32" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="GUETLANAutoLogin" />
+    <working_directory value="$PROJECT_DIR$" />
+    <go_parameters value="-o ..\.build\GUET自动登录校园网-win-arm32-v2.0.exe" />
+    <envs>
+      <env name="GOOS" value="windows" />
+      <env name="GOARCH" value="arm" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="GUETLANAutoLogin/main" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/main/main.go" />
+    <option name="run" value="false" />
+    <method v="2" />
+  </configuration>
+</component>

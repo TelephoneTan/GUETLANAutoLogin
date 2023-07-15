@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="make linux-amd64" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="GUETLANAutoLogin" />
+    <working_directory value="$PROJECT_DIR$" />
+    <go_parameters value="-o ..\.build\GUET自动登录校园网-linux-amd64-v2.0" />
+    <envs>
+      <env name="GOOS" value="linux" />
+      <env name="GOARCH" value="amd64" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="GUETLANAutoLogin/main" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/main/main.go" />
+    <option name="run" value="false" />
+    <method v="2" />
+  </configuration>
+</component>
