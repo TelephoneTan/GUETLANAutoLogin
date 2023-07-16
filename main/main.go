@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-const version = "2.0"
+const version = "2.1"
 
 const title = "\nGUET校园网自动登录 v" + version + "\n"
 
@@ -27,15 +28,15 @@ const usage = "\n使用方法：\n" +
 	"④ 脚本运行间隔（单位是秒，例如：5 表示每 5 秒测试一次，如果发现掉线则自动登录）\n"
 
 func help(argNum int) {
-	fmt.Printf(usage, argNum)
-	fmt.Printf("\n按回车键继续...\n")
+	log.Printf(usage, argNum)
+	log.Printf("\n按回车键继续...\n")
 	_, _ = fmt.Scanln()
 }
 
 func run(args []string) {
-	fmt.Printf(title)
-	fmt.Printf(github)
-	fmt.Println()
+	log.Printf(title)
+	log.Printf(github)
+	log.Println()
 	const argNum = 4
 	if len(os.Args) < argNum+1 {
 		help(argNum)
@@ -52,10 +53,11 @@ func run(args []string) {
 		sec := args[4]
 		interval, err := strconv.Atoi(sec)
 		if err != nil {
-			fmt.Printf("\n参数错误：无法将参数 %s 解析为秒数\n", sec)
+			log.Printf("\n参数错误：无法将参数 %s 解析为秒数\n", sec)
 			help(argNum)
 		} else {
-			u, _ := url.Parse("http://www.baidu.com")
+			const us = "http://119.29.29.29"
+			u, _ := url.Parse(us)
 			r := &http.Request{
 				Method: http.MethodGet,
 				URL:    u,
@@ -66,13 +68,12 @@ func run(args []string) {
 			client := http.Client{
 				Timeout: 2 * time.Second,
 			}
-			for tested, redirect, params := false, false, map[string]string{}; ; redirect, params = false, map[string]string{} {
-				fmt.Println(time.Now().String() + "：")
+			for tested, needLogin, params := false, false, map[string]string{}; ; needLogin, params = false, map[string]string{} {
+				log.Println(time.Now().String() + "：")
 				client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-					if strings.Contains(req.URL.String(), "www.baidu.com/") {
-						return http.ErrUseLastResponse
-					}
-					redirect = true
+					log.Printf("访问 %s 时检测到重定向，需要登录：", us)
+					log.Println(req.URL.String())
+					needLogin = true
 					params["wlan_user_ip"] = req.URL.Query().Get("wlanuserip")
 					params["wlan_user_ipv6"] = req.URL.Query().Get("wlanuseripv6")
 					params["wlan_user_mac"] = strings.ReplaceAll(req.URL.Query().Get("wlanusermac"), "-", "")
@@ -81,36 +82,55 @@ func run(args []string) {
 					return http.ErrUseLastResponse
 				}
 				res, err := client.Do(r)
-				timeout := err != nil || res.StatusCode == http.StatusBadGateway
+				if err != nil {
+					log.Printf("访问 %s 时发生了错误：", us)
+					log.Printf("%+#v", err)
+					log.Println(err)
+				} else {
+					log.Printf("访问 %s 时返回状态码：", us)
+					log.Println(res.StatusCode)
+				}
+				networkFailed := err != nil || res.StatusCode == http.StatusBadGateway
 				if err == nil {
 					_, _ = io.ReadAll(res.Body)
 					_ = res.Body.Close()
 				}
-				if timeout {
-					res, err := http.Get("http://10.0.1.5")
+				if networkFailed {
+					const us = "http://10.0.1.5"
+					res, err := http.Get(us)
 					if err == nil {
+						log.Printf("访问 %s 时返回状态码，有网：", us)
+						log.Println(res.StatusCode)
 						htmlBA, _ := io.ReadAll(res.Body)
 						_ = res.Body.Close()
-						var html string
 						if len(htmlBA) > 0 {
-							html = string(htmlBA)
+							html := string(htmlBA)
+							if strings.Contains(html, "COMWebLoginID_0") {
+								log.Println("校园网内网关异常，需要登录")
+								needLogin = true
+							} else {
+								log.Println("非校园网，无需登录")
+							}
+						} else {
+							log.Println("非校园网，无需登录")
 						}
-						timeout = strings.Contains(html, "COMWebLoginID_0")
 					} else {
-						timeout = false
+						log.Printf("访问 %s 时发生了错误，没网，无需登录：", us)
+						log.Printf("%+#v", err)
+						log.Println(err)
 					}
 				}
-				needLogin := timeout || redirect
 				if needLogin {
 					var id = id
 					if !tested {
 						id += carrier
-						fmt.Printf("正在尝试用 %s 登录\n", carrierLabel)
+						log.Printf("正在尝试用 %s 登录\n", carrierLabel)
 					} else {
-						fmt.Println("正在尝试用 校园网 登录")
+						log.Println("正在尝试用 校园网 登录")
 					}
 					tested = !tested
-					if timeout {
+					wifiLogin := false
+					{
 						q := url.Values{
 							"callback": {"dr1003"},
 							"0MKKey":   {"123456"},
@@ -120,12 +140,33 @@ func run(args []string) {
 						for k, v := range params {
 							q.Set(k, v)
 						}
-						res, err := http.Get("http://10.0.1.5/drcom/login?" + q.Encode())
+						const us = "http://10.0.1.5/drcom/login"
+						res, err := http.Get(us + "?" + q.Encode())
 						if err == nil {
-							_, _ = io.ReadAll(res.Body)
+							bs, err := io.ReadAll(res.Body)
 							_ = res.Body.Close()
+							if err != nil {
+								log.Printf("访问 %s 时发生了错误，需要进行无线登录：", us)
+								log.Printf("%+#v", err)
+								log.Println(err)
+								wifiLogin = true
+							} else {
+								log.Printf("访问 %s 时返回状态码和内容：", us)
+								log.Println(res.StatusCode)
+								log.Println(string(bs))
+								if res.StatusCode == http.StatusNotFound {
+									log.Println("非以太网，需要进行无线登录")
+									wifiLogin = true
+								}
+							}
+						} else {
+							log.Printf("访问 %s 时发生了错误，需要进行无线登录：", us)
+							log.Printf("%+#v", err)
+							log.Println(err)
+							wifiLogin = true
 						}
-					} else if redirect {
+					}
+					if wifiLogin {
 						q := url.Values{
 							"callback":      {"dr1003"},
 							"login_method":  {"1"},
@@ -135,15 +176,29 @@ func run(args []string) {
 						for k, v := range params {
 							q.Set(k, v)
 						}
-						res, err := http.Get("http://10.0.1.5:801/eportal/portal/login?" + q.Encode())
+						const us = "http://10.0.1.5:801/eportal/portal/login"
+						res, err := http.Get(us + "?" + q.Encode())
 						if err == nil {
-							_, _ = io.ReadAll(res.Body)
+							bs, err := io.ReadAll(res.Body)
 							_ = res.Body.Close()
+							if err != nil {
+								log.Printf("访问 %s 时发生了错误：", us)
+								log.Printf("%+#v", err)
+								log.Println(err)
+							} else {
+								log.Printf("访问 %s 时返回状态码和内容：", us)
+								log.Println(res.StatusCode)
+								log.Println(string(bs))
+							}
+						} else {
+							log.Printf("访问 %s 时发生了错误：", us)
+							log.Printf("%+#v", err)
+							log.Println(err)
 						}
 					}
 				} else {
 					tested = false
-					fmt.Println("无需登录")
+					log.Println("无需登录")
 					time.Sleep(time.Duration(interval) * time.Second)
 				}
 			}
