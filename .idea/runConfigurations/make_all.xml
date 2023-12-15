@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="make all" type="CompoundRunConfigurationType">
+    <toRun name="make linux-amd64" type="GoApplicationRunConfiguration" />
+    <toRun name="make linux-arm32" type="GoApplicationRunConfiguration" />
+    <toRun name="make linux-arm64" type="GoApplicationRunConfiguration" />
+    <toRun name="make linux-x86" type="GoApplicationRunConfiguration" />
+    <toRun name="make win-amd64" type="GoApplicationRunConfiguration" />
+    <toRun name="make win-arm32" type="GoApplicationRunConfiguration" />
+    <toRun name="make win-arm64" type="GoApplicationRunConfiguration" />
+    <toRun name="make win-x86" type="GoApplicationRunConfiguration" />
+    <method v="2" />
+  </configuration>
+</component>
