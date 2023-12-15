@@ -72,8 +72,7 @@ func run(args []string) {
 			for tested, needLogin, params := false, false, map[string]string{}; ; needLogin, params = false, map[string]string{} {
 				log.Println(time.Now().String() + "：")
 				client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-					log.Printf("访问 %s 时检测到重定向，需要登录：", us)
-					log.Println(req.URL.String())
+					log.Printf("访问 %s 时被重定向到 %s ，需要登录：", us, req.URL.String())
 					needLogin = true
 					params["wlan_user_ip"] = req.URL.Query().Get("wlanuserip")
 					params["wlan_user_ipv6"] = req.URL.Query().Get("wlanuseripv6")
@@ -196,6 +195,7 @@ func run(args []string) {
 							log.Println(err)
 						}
 					}
+					time.Sleep(1 * time.Second)
 				} else {
 					tested = false
 					log.Println("无需登录")
