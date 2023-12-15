@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const version = "2.3"
+const version = "2.5"
 
 const title = "\nGUET校园网自动登录 v" + version + "\n"
 
@@ -69,7 +69,8 @@ func run(args []string) {
 			client := http.Client{
 				Timeout: 2 * time.Second,
 			}
-			for tested, needLogin, params := false, false, map[string]string{}; ; needLogin, params = false, map[string]string{} {
+			carrierTryTimes := 2
+			for tested, needLogin, params := carrierTryTimes, false, map[string]string{}; ; needLogin, params = false, map[string]string{} {
 				log.Println(time.Now().String() + "：")
 				client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 					log.Printf("访问 %s 时被重定向到 %s ，需要登录：", us, req.URL.String())
@@ -122,13 +123,14 @@ func run(args []string) {
 				}
 				if needLogin {
 					var id = id
-					if !tested {
+					if tested > 0 {
+						tested--
 						id += carrier
 						log.Printf("正在尝试用 %s 登录\n", carrierLabel)
 					} else {
+						tested = carrierTryTimes
 						log.Println("正在尝试用 校园网 登录")
 					}
-					tested = !tested
 					wifiLogin := false
 					{
 						q := url.Values{
@@ -195,9 +197,8 @@ func run(args []string) {
 							log.Println(err)
 						}
 					}
-					time.Sleep(1 * time.Second)
 				} else {
-					tested = false
+					tested = carrierTryTimes
 					log.Println("无需登录")
 					time.Sleep(time.Duration(interval) * time.Second)
 				}
