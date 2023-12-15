@@ -49,7 +49,8 @@ func run(args []string) {
 			"中国电信": "@telecom",
 		}[carrierLabel]
 		id := args[1]
-		pwd := base64.StdEncoding.EncodeToString([]byte(args[2]))
+		rawPWD := args[2]
+		encodedPWD := base64.StdEncoding.EncodeToString([]byte(rawPWD))
 		sec := args[4]
 		interval, err := strconv.Atoi(sec)
 		if err != nil {
@@ -132,16 +133,15 @@ func run(args []string) {
 					wifiLogin := false
 					{
 						q := url.Values{
-							"callback": {"dr1003"},
-							"0MKKey":   {"123456"},
-							"DDDDD":    {id},
-							"upass":    {pwd},
+							"DDDDD": {id},
+							"upass": {rawPWD},
 						}
 						for k, v := range params {
 							q.Set(k, v)
 						}
 						const us = "http://10.0.1.5/drcom/login"
-						res, err := http.Get(us + "?" + q.Encode())
+						// 这里特别注意：参数必须按照特定顺序排列，否则会影响服务器行为
+						res, err := http.Get(us + "?callback=dr1003&" + q.Encode() + "&0MKKey=123456")
 						if err == nil {
 							bs, err := io.ReadAll(res.Body)
 							_ = res.Body.Close()
@@ -171,7 +171,7 @@ func run(args []string) {
 							"callback":      {"dr1003"},
 							"login_method":  {"1"},
 							"user_account":  {",0," + id},
-							"user_password": {pwd},
+							"user_password": {encodedPWD},
 						}
 						for k, v := range params {
 							q.Set(k, v)
