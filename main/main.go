@@ -158,6 +158,9 @@ func run(args []string) {
 								if res.StatusCode == http.StatusNotFound {
 									log.Println("非以太网，需要进行无线登录")
 									wifiLogin = true
+								} else {
+									log.Println("可能是以太网，仍需进行后备无线登录")
+									wifiLogin = true
 								}
 							}
 						} else {
