@@ -2,7 +2,7 @@
   <configuration default="false" name="make linux-x86" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="GUETLANAutoLogin" />
     <working_directory value="$PROJECT_DIR$" />
-    <go_parameters value="-o ..\.build\GUET自动登录校园网-linux-x86-v2.5" />
+    <go_parameters value="-o ..\.build\GUET自动登录校园网-linux-x86-v2.6" />
     <envs>
       <env name="GOOS" value="linux" />
       <env name="GOARCH" value="386" />

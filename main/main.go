@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const version = "2.5"
+const version = "2.6"
 
 const title = "\nGUET校园网自动登录 v" + version + "\n"
 

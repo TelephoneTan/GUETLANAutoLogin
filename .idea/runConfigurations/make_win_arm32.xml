@@ -2,7 +2,7 @@
   <configuration default="false" name="make win-arm32" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="GUETLANAutoLogin" />
     <working_directory value="$PROJECT_DIR$" />
-    <go_parameters value="-o ..\.build\GUET自动登录校园网-win-arm32-v2.5.exe" />
+    <go_parameters value="-o ..\.build\GUET自动登录校园网-win-arm32-v2.6.exe" />
     <envs>
       <env name="GOOS" value="windows" />
       <env name="GOARCH" value="arm" />
